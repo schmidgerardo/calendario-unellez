@@ -110,7 +110,7 @@ async function eliminarActividad(id) {
     }
 }
 
-// ========== RENDERIZAR CALENDARIO CON FILTROS ==========
+// ========== RENDERIZAR CALENDARIO ==========
 async function renderCalendario() {
     const grid = document.getElementById('calendarioGrid');
     grid.innerHTML = '';
@@ -164,7 +164,6 @@ async function renderCalendario() {
         div.className = 'dia';
         div.dataset.fecha = fechaStr;
         
-        // Usar actividadesFiltradas para los badges
         const actisDia = actividadesFiltradas.filter(a => a.fecha === fechaStr);
         const actisDiaTotal = actividadesMes.filter(a => a.fecha === fechaStr);
         const pendientes = actisDiaTotal.filter(a => !a.cumplida).length;
@@ -184,7 +183,6 @@ async function renderCalendario() {
         numSpan.textContent = d;
         div.appendChild(numSpan);
 
-        // Badge muestra actividades filtradas
         if (actisDia.length > 0) {
             const badge = document.createElement('span');
             badge.className = 'dia-badge';
@@ -202,7 +200,6 @@ async function renderCalendario() {
             }
         });
 
-        // Drag & Drop
         div.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
@@ -252,21 +249,20 @@ function mostrarResultadosFiltro() {
     const estado = document.getElementById('filtroEstado').value;
     const busqueda = document.getElementById('filtroBusqueda').value.trim();
     
-    // Verificar si hay filtro activo
     const hayFiltro = (estado !== 'todas' || busqueda !== '');
     
     if (!hayFiltro) {
-        // Mostrar calendario, ocultar resultados
         wrapper.style.display = 'block';
         container.style.display = 'none';
         return;
     }
     
-    // Ocultar calendario, mostrar resultados
     wrapper.style.display = 'none';
     container.style.display = 'block';
     
-    // Mostrar actividades filtradas
+    // Limpiar lista antes de agregar nuevos elementos
+    lista.innerHTML = '';
+    
     if (actividadesFiltradas.length === 0) {
         lista.innerHTML = `
             <div style="text-align:center;color:#95a5a6;padding:30px;">
@@ -278,7 +274,6 @@ function mostrarResultadosFiltro() {
         return;
     }
     
-    lista.innerHTML = '';
     actividadesFiltradas.forEach(act => {
         const div = document.createElement('div');
         div.className = 'actividad-item';
@@ -326,7 +321,6 @@ function mostrarResultadosFiltro() {
         div.appendChild(chk);
         div.appendChild(info);
         
-        // Click para abrir detalle
         div.addEventListener('click', (e) => {
             if (!e.target.closest('input[type="checkbox"]')) {
                 abrirModalDetalle(act.id);
@@ -446,7 +440,6 @@ function renderActividadesModal(actividadesDia) {
             }
         });
         
-        // Drag & Drop
         div.addEventListener('mousedown', (e) => {
             if (e.button === 0 && !e.target.closest('input[type="checkbox"]') && !e.target.closest('.btn-eliminar')) {
                 dragStartX = e.clientX;
