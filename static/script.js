@@ -113,6 +113,8 @@ async function eliminarActividad(id) {
 // ========== RENDERIZAR CALENDARIO ==========
 async function renderCalendario() {
     const grid = document.getElementById('calendarioGrid');
+    
+    // 🔴 IMPORTANTE: Limpiar completamente antes de renderizar
     grid.innerHTML = '';
     
     const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -228,10 +230,8 @@ async function renderCalendario() {
         grid.appendChild(div);
     }
 
-    // Mostrar/ocultar calendario según filtros
     mostrarResultadosFiltro();
 
-    // Actualizar estadísticas
     const total = actividadesMes.length;
     const cumplidasTotal = actividadesMes.filter(a => a.cumplida).length;
     document.getElementById('totalActividades').textContent = total;
