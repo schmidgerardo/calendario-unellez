@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 Calendario UNELLEZ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header con logo UNELLEZ -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-container">
+                    <div class="logo-unellez">
+                        <img src="{{ url_for('static', filename='unellez.png') }}" alt="UNELLEZ" class="logo-img">
+                        <span>UNELLEZ</span>
+                    </div>
+                    <h1><i class="fas fa-calendar-check"></i> Calendario</h1>
+                </div>
+                <div class="header-stats">
+                    <button onclick="abrirModalEstadisticas()" class="stat-badge stat-btn" title="Estadísticas del mes">
+                        <i class="fas fa-chart-pie"></i>
+                        <span id="totalActividades">0</span>/<span id="totalCumplidas">0</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Controles de navegación -->
+        <div class="nav-controls">
+            <button onclick="cambiarMes(-1)" class="nav-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2 id="mesLabel">Enero 2026</h2>
+            <button onclick="cambiarMes(1)" class="nav-btn">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button onclick="irHoy()" class="nav-btn hoy-btn">
+                <i class="fas fa-calendar-day"></i>
+                <span class="hoy-text">Hoy</span>
+            </button>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters">
+            <div class="filter-group">
+                <i class="fas fa-filter"></i>
+                <select id="filtroEstado" onchange="aplicarFiltrosCalendario()">
+                    <option value="todas">Todas</option>
+                    <option value="pendientes">Pendientes</option>
+                    <option value="cumplidas">Cumplidas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <i class="fas fa-search"></i>
+                <input type="text" id="filtroBusqueda" placeholder="Buscar..." oninput="aplicarFiltrosCalendario()">
+            </div>
+        </div>
+
+        <!-- Calendario Grid -->
+        <div class="calendario-wrapper">
+            <div class="calendario-grid" id="calendarioGrid">
+                <!-- Los días se generan con JS -->
+            </div>
+        </div>
+
+        <!-- Lista de resultados del filtro -->
+        <div class="filtro-resultados" id="filtroResultados" style="display: none;">
+            <div class="filtro-header">
+                <h4><i class="fas fa-list"></i> Resultados del filtro</h4>
+                <button onclick="limpiarFiltros()" class="btn-clear-filtros">
+                    <i class="fas fa-times"></i> Limpiar
+                </button>
+            </div>
+            <div class="filtro-lista" id="filtroLista"></div>
+        </div>
+    </div>
+
+    <!-- MODAL para ver actividades del día -->
+    <div class="modal-overlay" id="modalDiaOverlay">
+        <div class="modal modal-dia">
+            <div class="modal-header unellez-header">
+                <div class="modal-title-group">
+                    <i class="fas fa-calendar-day"></i>
+                    <div>
+                        <h3 id="modalDiaTitulo">Actividades</h3>
+                        <span id="modalDiaFecha" class="modal-fecha"></span>
+                    </div>
+                </div>
+                <div class="modal-stats">
+                    <span id="modalResumenDia"><i class="fas fa-chart-pie"></i> 0/0</span>
+                    <button onclick="abrirModalActividad()" class="btn-add-mini" title="Nueva actividad">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="chart-container-mini" id="chartContainer">
+                    <canvas id="chartDia"></canvas>
+                </div>
+                <div class="lista-actividades" id="listaActividadesModal">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No hay actividades</p>
+                        <small>Haz clic en <i class="fas fa-plus"></i> para agregar</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer unellez-footer">
+                <button onclick="cerrarModalDia()" class="btn-modal btn-cancel">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ESTADÍSTICAS DEL MES -->
+    <div class="modal-overlay" id="modalEstadisticasOverlay">
+        <div class="modal modal-estadisticas">
+            <div class="modal-header unellez-header">
+                <i class="fas fa-chart-pie" style="color: #FFD700;"></i>
+                <h3 id="estadisticasTitulo">Estadísticas del Mes</h3>
+                <button class="modal-close" onclick="cerrarModalEstadisticas()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="estadisticas-resumen">
+                    <div class="estadistica-item">
+                        <span class="estadistica-numero" id="estTotal">0</span>
+                        <span class="estadistica-label">Total</span>
+                    </div>
+                    <div class="estadistica-item">
+                        <span class="estadistica-numero" id="estCumplidas">0</span>
+                        <span class="estadistica-label">Cumplidas</span>
+                    </div>
+                    <div class="estadistica-item">
+                        <span class="estadistica-numero" id="estPendientes">0</span>
+                        <span class="estadistica-label">Pendientes</span>
+                    </div>
+                </div>
+                <div class="chart-container-grande">
+                    <canvas id="chartEstadisticas"></canvas>
+                </div>
+                <div class="estadisticas-lista" id="estadisticasLista">
+                    <h5><i class="fas fa-list"></i> Actividades del mes</h5>
+                    <div id="estadisticasActividades"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="cerrarModalEstadisticas()" class="btn-modal btn-cancel">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL para ver/editar actividad individual -->
+    <div class="modal-overlay" id="modalActividadDetalleOverlay">
+        <div class="modal modal-detalle">
+            <div class="modal-header unellez-header">
+                <i class="fas fa-info-circle" style="color: #FFD700;"></i>
+                <h3 id="modalDetalleTitulo">Detalle de Actividad</h3>
+                <button class="modal-close" onclick="cerrarModalDetalle()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="detalle-campo">
+                    <label><i class="fas fa-tag"></i> Título</label>
+                    <p id="detalleTitulo">-</p>
+                </div>
+                <div class="detalle-campo">
+                    <label><i class="fas fa-align-left"></i> Descripción</label>
+                    <p id="detalleDescripcion" class="detalle-texto">Sin descripción</p>
+                </div>
+                <div class="detalle-campo">
+                    <label><i class="fas fa-check-circle"></i> Solución</label>
+                    <p id="detalleSolucion" class="detalle-texto">Sin solución registrada</p>
+                </div>
+                <div class="detalle-row">
+                    <div class="detalle-campo half">
+                        <label><i class="fas fa-map-marker-alt"></i> Dirección</label>
+                        <p id="detalleDireccion">-</p>
+                    </div>
+                    <div class="detalle-campo half">
+                        <label><i class="fas fa-clock"></i> Hora</label>
+                        <p id="detalleHora">-</p>
+                    </div>
+                </div>
+                <div class="detalle-campo">
+                    <label><i class="fas fa-calendar-day"></i> Fecha</label>
+                    <p id="detalleFecha">-</p>
+                </div>
+                <div class="detalle-campo">
+                    <label><i class="fas fa-check-circle"></i> Estado</label>
+                    <p id="detalleEstado">-</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="cerrarModalDetalle()" class="btn-modal btn-cancel">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+                <button onclick="editarDesdeDetalle()" class="btn-modal btn-confirm" id="btnEditarDetalle">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL para agregar/editar actividad -->
+    <div class="modal-overlay" id="modalActividadOverlay">
+        <div class="modal">
+            <div class="modal-header unellez-header">
+                <i class="fas fa-plus-circle" style="color: #FFD700;"></i>
+                <h3 id="modalActividadTitulo">Nueva Actividad</h3>
+                <button class="modal-close" onclick="cerrarModalActividad()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="formActividad" onsubmit="guardarActividadForm(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> Título *</label>
+                        <input type="text" id="inputTitulo" required placeholder="Ej: Reunión con equipo">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-align-left"></i> Descripción</label>
+                        <textarea id="inputDescripcion" rows="3" placeholder="Detalles adicionales..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-check-circle"></i> Solución</label>
+                        <textarea id="inputSolucion" rows="2" placeholder="Solución o resultado de la actividad..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label><i class="fas fa-map-marker-alt"></i> Dirección</label>
+                            <input type="text" id="inputDireccion" placeholder="Ej: Oficina 301">
+                        </div>
+                        <div class="form-group half">
+                            <label><i class="fas fa-clock"></i> Hora</label>
+                            <input type="time" id="inputHora">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-calendar-day"></i> Fecha</label>
+                        <input type="date" id="inputFecha">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="cerrarModalActividad()" class="btn-modal btn-cancel">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn-modal btn-confirm">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL de confirmación -->
+    <div class="modal-overlay" id="modalConfirmOverlay">
+        <div class="modal modal-small">
+            <div class="modal-header unellez-header">
+                <i class="fas fa-question-circle" style="color: #FFD700;"></i>
+                <h3 id="modalConfirmTitulo">Confirmar</h3>
+                <button class="modal-close" onclick="cerrarModalConfirm()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="modalConfirmMensaje">¿Estás seguro de realizar esta acción?</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="cerrarModalConfirm()" class="btn-modal btn-cancel">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="modalConfirmBtn" class="btn-modal btn-confirm">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
