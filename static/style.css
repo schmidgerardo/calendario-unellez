@@ -230,7 +230,7 @@ body {
 .filters {
     display: flex;
     gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
 }
 
@@ -262,6 +262,51 @@ body {
     background: transparent;
     color: var(--unellez-dark);
     min-width: 0;
+}
+
+/* LEYENDA DE COLORES */
+.leyenda-colores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 6px 0 10px 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 8px;
+    justify-content: center;
+}
+
+.leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #555;
+    font-weight: 500;
+}
+
+.color-muestra {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    flex-shrink: 0;
+}
+
+.color-normal {
+    background: #ffffff;
+}
+
+.color-pendiente {
+    background: #fdebd0;
+}
+
+.color-cumplida {
+    background: #d4edda;
+}
+
+.color-sin-actividades {
+    background: #e8e8e8;
+    border-color: #aaa;
 }
 
 /* CALENDARIO - SIN DESBORDAMIENTO */
@@ -376,6 +421,18 @@ body {
 
 .dia.tiene-pendientes {
     background: #fdebd0;
+}
+
+/* Día sin actividades previstas */
+.dia.sin-actividades-previstas {
+    background: #e8e8e8 !important;
+    border-color: #aaa !important;
+    color: #666 !important;
+}
+
+.dia.sin-actividades-previstas .dia-badge {
+    background: #999 !important;
+    color: white !important;
 }
 
 /* FILTRO RESULTADOS */
@@ -757,6 +814,19 @@ body {
     border-radius: 0 0 16px 16px;
 }
 
+.modal-footer-dia {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.modal-footer-dia .btn-group {
+    display: flex;
+    gap: 8px;
+}
+
 .btn-modal {
     padding: 6px 16px;
     border: none;
@@ -788,6 +858,35 @@ body {
     background: #002244;
     transform: translateY(-1px);
     box-shadow: 0 3px 12px rgba(0, 51, 102, 0.3);
+}
+
+/* Botón sin actividades */
+.btn-sin-actividades {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.btn-sin-actividades:hover {
+    background: #5a6268;
+    transform: scale(1.03);
+}
+
+.btn-sin-actividades.activo {
+    background: #28a745;
+}
+
+.btn-sin-actividades.activo:hover {
+    background: #218838;
 }
 
 /* Formulario */
@@ -963,6 +1062,83 @@ body {
     font-size: 13px;
 }
 
+/* TOAST NOTIFICATIONS */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 350px;
+    width: 100%;
+}
+
+.toast {
+    background: #1a1a2e;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: toastIn 0.3s ease-out;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.toast.success {
+    border-left: 4px solid #28a745;
+}
+
+.toast.error {
+    border-left: 4px solid #dc3545;
+}
+
+.toast.info {
+    border-left: 4px solid #17a2b8;
+}
+
+.toast i {
+    font-size: 18px;
+}
+
+.toast.success i {
+    color: #28a745;
+}
+
+.toast.error i {
+    color: #dc3545;
+}
+
+.toast.info i {
+    color: #17a2b8;
+}
+
+@keyframes toastIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.toast.removing {
+    animation: toastOut 0.3s ease-in forwards;
+}
+
+@keyframes toastOut {
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
     .app-container {
@@ -1046,6 +1222,21 @@ body {
     .form-row {
         flex-direction: column;
         gap: 0;
+    }
+
+    .modal-footer-dia {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .modal-footer-dia .btn-group {
+        justify-content: center;
+    }
+
+    .btn-sin-actividades {
+        justify-content: center;
+        font-size: 11px;
+        padding: 6px 12px;
     }
 }
 
@@ -1195,6 +1386,17 @@ body {
     }
     .chart-container-grande {
         max-width: 200px;
+    }
+
+    .toast-container {
+        max-width: 90%;
+        bottom: 10px;
+        right: 10px;
+    }
+
+    .toast {
+        font-size: 12px;
+        padding: 10px 14px;
     }
 }
 
