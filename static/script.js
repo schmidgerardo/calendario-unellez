@@ -110,13 +110,31 @@ async function eliminarActividad(id) {
     }
 }
 
-// ========== RENDERIZAR CALENDARIO ==========
+// ========== RENDERIZAR CALENDARIO (CORREGIDO - SIN DUPLICACIÓN) ==========
 async function renderCalendario() {
     const grid = document.getElementById('calendarioGrid');
+    const wrapper = document.querySelector('.calendario-wrapper');
     
-    // Limpiar completamente antes de renderizar
+    // ✅ Limpiar el grid completamente
     grid.innerHTML = '';
     
+    // ✅ Verificar si hay filtro activo
+    const estado = document.getElementById('filtroEstado').value;
+    const busqueda = document.getElementById('filtroBusqueda').value.trim();
+    const hayFiltro = (estado !== 'todas' || busqueda !== '');
+    
+    // ✅ Control de visibilidad del calendario y resultados
+    if (!hayFiltro) {
+        wrapper.style.display = 'block';
+        document.getElementById('filtroResultados').style.display = 'none';
+        // ✅ Limpiar lista de resultados cuando no hay filtro
+        document.getElementById('filtroLista').innerHTML = '';
+    } else {
+        wrapper.style.display = 'none';
+        document.getElementById('filtroResultados').style.display = 'block';
+    }
+    
+    // Generar días de la semana
     const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     diasSemana.forEach(d => {
         const div = document.createElement('div');
@@ -129,20 +147,19 @@ async function renderCalendario() {
     if (!Array.isArray(actividadesMes)) actividadesMes = [];
     
     // Aplicar filtros
-    const estado = document.getElementById('filtroEstado').value;
-    const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase().trim();
+    const busquedaLower = busqueda.toLowerCase();
     
     actividadesFiltradas = actividadesMes.filter(act => {
         let mostrar = true;
         if (estado === 'pendientes' && act.cumplida) mostrar = false;
         if (estado === 'cumplidas' && !act.cumplida) mostrar = false;
-        if (busqueda) {
+        if (busquedaLower) {
             const titulo = (act.titulo || '').toLowerCase();
             const descripcion = (act.descripcion || '').toLowerCase();
             const direccion = (act.direccion || '').toLowerCase();
             const solucion = (act.solucion || '').toLowerCase();
-            if (!titulo.includes(busqueda) && !descripcion.includes(busqueda) && 
-                !direccion.includes(busqueda) && !solucion.includes(busqueda)) {
+            if (!titulo.includes(busquedaLower) && !descripcion.includes(busquedaLower) && 
+                !direccion.includes(busquedaLower) && !solucion.includes(busquedaLower)) {
                 mostrar = false;
             }
         }
@@ -153,12 +170,14 @@ async function renderCalendario() {
     const diasEnMes = new Date(añoActual, mesActual + 1, 0).getDate();
     const hoy = new Date();
 
+    // Días vacíos
     for (let i = 0; i < primerDia; i++) {
         const div = document.createElement('div');
         div.className = 'dia otro-mes';
         grid.appendChild(div);
     }
 
+    // Días del mes
     for (let d = 1; d <= diasEnMes; d++) {
         const fecha = new Date(añoActual, mesActual, d);
         const fechaStr = fecha.toISOString().split('T')[0];
@@ -202,6 +221,7 @@ async function renderCalendario() {
             }
         });
 
+        // Drag & Drop
         div.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
@@ -230,7 +250,7 @@ async function renderCalendario() {
         grid.appendChild(div);
     }
 
-    // Mostrar resultados del filtro
+    // ✅ Mostrar resultados del filtro (sin duplicar)
     mostrarResultadosFiltro();
 
     // Actualizar estadísticas
@@ -243,7 +263,7 @@ async function renderCalendario() {
         new Date(añoActual, mesActual).toLocaleString('es', { month: 'long', year: 'numeric' });
 }
 
-// ========== MOSTRAR RESULTADOS DEL FILTRO (CORREGIDO) ==========
+// ========== MOSTRAR RESULTADOS DEL FILTRO (CORREGIDO - SIN DUPLICACIÓN) ==========
 function mostrarResultadosFiltro() {
     const container = document.getElementById('filtroResultados');
     const lista = document.getElementById('filtroLista');
@@ -253,9 +273,12 @@ function mostrarResultadosFiltro() {
     
     const hayFiltro = (estado !== 'todas' || busqueda !== '');
     
+    // ✅ Control de visibilidad
     if (!hayFiltro) {
         wrapper.style.display = 'block';
         container.style.display = 'none';
+        // ✅ Limpiar la lista cuando no hay filtro
+        lista.innerHTML = '';
         return;
     }
     
@@ -276,6 +299,7 @@ function mostrarResultadosFiltro() {
         return;
     }
     
+    // ✅ Agregar elementos filtrados
     actividadesFiltradas.forEach(act => {
         const div = document.createElement('div');
         div.className = 'actividad-item';
