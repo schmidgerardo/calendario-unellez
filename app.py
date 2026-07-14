@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import sys
-import json  # <--- Añadir esta línea
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -145,7 +145,6 @@ def init_db():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {e}")
         return False
-
 
 @app.route('/')
 def index():
