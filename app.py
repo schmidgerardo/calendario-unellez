@@ -235,9 +235,18 @@ def get_actividades():
 @app.route('/api/actividades', methods=['POST'])
 def crear_actividad():
     """Crea una nueva actividad"""
+    print("=" * 50)
+    print("🚨 POST /api/actividades RECIBIDO")
+    print("=" * 50)
+    
     try:
-        data = request.json
-        print("📝 Datos recibidos en POST:", data)
+        # Verificar que la solicitud tenga JSON
+        if not request.is_json:
+            print("❌ La solicitud no es JSON")
+            return jsonify({'error': 'Se esperaba Content-Type: application/json'}), 400
+        
+        data = request.get_json()
+        print("📝 Datos recibidos en POST:", json.dumps(data, indent=2))
         
         fecha = data.get('fecha')
         titulo = data.get('titulo')
@@ -250,17 +259,20 @@ def crear_actividad():
         print(f"📊 sin_actividades: {sin_actividades}, tipo: {type(sin_actividades)}")
         
         if not fecha or not titulo:
+            print("❌ Faltan campos obligatorios")
             return jsonify({'error': 'Fecha y título son obligatorios'}), 400
         
         # Validar formato de fecha
         try:
             from datetime import datetime
             datetime.strptime(fecha, '%Y-%m-%d')
-        except ValueError:
+        except ValueError as e:
+            print(f"❌ Formato de fecha inválido: {e}")
             return jsonify({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
         
         conn = get_db_connection()
         if not conn:
+            print("❌ No se pudo conectar a la base de datos")
             return jsonify({'error': 'Error de conexión a la base de datos'}), 500
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -271,8 +283,8 @@ def crear_actividad():
             resultado = cur.fetchone()
             nuevo_orden = resultado['nuevo_orden'] if resultado else 0
             
-            print("📝 Insertando actividad en la base de datos...")
-            print(f"📝 Datos a insertar: fecha={fecha}, titulo={titulo}, sin_actividades={sin_actividades}")
+            print(f"📝 Insertando actividad en la base de datos...")
+            print(f"📝 Datos: fecha={fecha}, titulo={titulo}, sin_actividades={sin_actividades}, orden={nuevo_orden}")
             
             # Asegurarse de que sin_actividades sea booleano
             sin_actividades_bool = bool(sin_actividades)
@@ -286,10 +298,10 @@ def crear_actividad():
             nueva_actividad = cur.fetchone()
             conn.commit()
             
-            print("✅ Actividad creada exitosamente:", nueva_actividad['id'])
+            print("✅ Actividad creada exitosamente, ID:", nueva_actividad['id'])
             
             # Convertir a JSON
-            return jsonify({
+            response_data = {
                 'id': nueva_actividad['id'],
                 'fecha': nueva_actividad['fecha'].isoformat(),
                 'titulo': nueva_actividad['titulo'],
@@ -301,7 +313,11 @@ def crear_actividad():
                 'sin_actividades': nueva_actividad['sin_actividades'] or False,
                 'orden': nueva_actividad['orden'],
                 'created_at': nueva_actividad['created_at'].isoformat() if nueva_actividad['created_at'] else None
-            }), 201
+            }
+            
+            print("📤 Respuesta enviada:", json.dumps(response_data, indent=2))
+            print("=" * 50)
+            return jsonify(response_data), 201
         
         except psycopg2.Error as e:
             conn.rollback()
