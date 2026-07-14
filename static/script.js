@@ -116,7 +116,7 @@ async function eliminarActividad(id) {
     }
 }
 
-// ========== RENDERIZAR CALENDARIO (CORREGIDO - SIN DUPLICACIÓN) ==========
+// ========== RENDERIZAR CALENDARIO (VERSIÓN DEFINITIVA) ==========
 async function renderCalendario() {
     const grid = document.getElementById('calendarioGrid');
     const wrapper = document.querySelector('.calendario-wrapper');
@@ -133,14 +133,13 @@ async function renderCalendario() {
     if (!hayFiltro) {
         wrapper.style.display = 'block';
         document.getElementById('filtroResultados').style.display = 'none';
-        // ✅ Limpiar lista de resultados cuando no hay filtro
         document.getElementById('filtroLista').innerHTML = '';
     } else {
         wrapper.style.display = 'none';
         document.getElementById('filtroResultados').style.display = 'block';
     }
     
-    // Generar días de la semana
+    // Generar días de la semana (siempre se generan)
     const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     diasSemana.forEach(d => {
         const div = document.createElement('div');
@@ -149,29 +148,33 @@ async function renderCalendario() {
         grid.appendChild(div);
     });
 
-    // ✅ Obtener actividades del mes actual
+    // Obtener actividades del mes actual
     await fetchActividades(null, mesActual, añoActual);
     if (!Array.isArray(actividadesMes)) actividadesMes = [];
     
-    // Aplicar filtros
-    const busquedaLower = busqueda.toLowerCase();
-    
-    actividadesFiltradas = actividadesMes.filter(act => {
-        let mostrar = true;
-        if (estado === 'pendientes' && act.cumplida) mostrar = false;
-        if (estado === 'cumplidas' && !act.cumplida) mostrar = false;
-        if (busquedaLower) {
-            const titulo = (act.titulo || '').toLowerCase();
-            const descripcion = (act.descripcion || '').toLowerCase();
-            const direccion = (act.direccion || '').toLowerCase();
-            const solucion = (act.solucion || '').toLowerCase();
-            if (!titulo.includes(busquedaLower) && !descripcion.includes(busquedaLower) && 
-                !direccion.includes(busquedaLower) && !solucion.includes(busquedaLower)) {
-                mostrar = false;
+    // ✅ Aplicar filtros SOLO si hay filtro activo
+    if (hayFiltro) {
+        const busquedaLower = busqueda.toLowerCase();
+        actividadesFiltradas = actividadesMes.filter(act => {
+            let mostrar = true;
+            if (estado === 'pendientes' && act.cumplida) mostrar = false;
+            if (estado === 'cumplidas' && !act.cumplida) mostrar = false;
+            if (busquedaLower) {
+                const titulo = (act.titulo || '').toLowerCase();
+                const descripcion = (act.descripcion || '').toLowerCase();
+                const direccion = (act.direccion || '').toLowerCase();
+                const solucion = (act.solucion || '').toLowerCase();
+                if (!titulo.includes(busquedaLower) && !descripcion.includes(busquedaLower) && 
+                    !direccion.includes(busquedaLower) && !solucion.includes(busquedaLower)) {
+                    mostrar = false;
+                }
             }
-        }
-        return mostrar;
-    });
+            return mostrar;
+        });
+    } else {
+        // ✅ Si no hay filtro, actividadesFiltradas es igual a actividadesMes
+        actividadesFiltradas = [...actividadesMes];
+    }
     
     const primerDia = new Date(añoActual, mesActual, 1).getDay();
     const diasEnMes = new Date(añoActual, mesActual + 1, 0).getDate();
@@ -192,6 +195,7 @@ async function renderCalendario() {
         div.className = 'dia';
         div.dataset.fecha = fechaStr;
         
+        // ✅ Usar actividadesFiltradas para mostrar badges filtrados
         const actisDia = actividadesFiltradas.filter(a => a.fecha === fechaStr);
         const actisDiaTotal = actividadesMes.filter(a => a.fecha === fechaStr);
         const pendientes = actisDiaTotal.filter(a => !a.cumplida).length;
@@ -257,8 +261,10 @@ async function renderCalendario() {
         grid.appendChild(div);
     }
 
-    // ✅ Mostrar resultados del filtro
-    mostrarResultadosFiltro();
+    // ✅ SOLO mostrar resultados del filtro si hay filtro activo
+    if (hayFiltro) {
+        mostrarResultadosFiltro();
+    }
 
     // Actualizar estadísticas
     const total = actividadesMes.length;
@@ -270,29 +276,23 @@ async function renderCalendario() {
         new Date(añoActual, mesActual).toLocaleString('es', { month: 'long', year: 'numeric' });
 }
 
-// ========== MOSTRAR RESULTADOS DEL FILTRO (CORREGIDO - SIN DUPLICACIÓN) ==========
+// ========== MOSTRAR RESULTADOS DEL FILTRO ==========
 function mostrarResultadosFiltro() {
     const container = document.getElementById('filtroResultados');
     const lista = document.getElementById('filtroLista');
-    const wrapper = document.querySelector('.calendario-wrapper');
     const estado = document.getElementById('filtroEstado').value;
     const busqueda = document.getElementById('filtroBusqueda').value.trim();
     
     const hayFiltro = (estado !== 'todas' || busqueda !== '');
     
-    // ✅ Control de visibilidad
+    // ✅ Solo mostrar si hay filtro
     if (!hayFiltro) {
-        wrapper.style.display = 'block';
         container.style.display = 'none';
-        // ✅ Limpiar la lista cuando no hay filtro
         lista.innerHTML = '';
         return;
     }
     
-    wrapper.style.display = 'none';
     container.style.display = 'block';
-    
-    // ✅ IMPORTANTE: Limpiar la lista ANTES de agregar nuevos elementos
     lista.innerHTML = '';
     
     if (actividadesFiltradas.length === 0) {
@@ -306,7 +306,6 @@ function mostrarResultadosFiltro() {
         return;
     }
     
-    // ✅ Agregar elementos filtrados
     actividadesFiltradas.forEach(act => {
         const div = document.createElement('div');
         div.className = 'actividad-item';
@@ -375,6 +374,7 @@ function limpiarFiltros() {
 
 // ========== APLICAR FILTROS EN CALENDARIO ==========
 function aplicarFiltrosCalendario() {
+    // ✅ Solo llamar a renderCalendario, que ya maneja todo
     renderCalendario();
 }
 
