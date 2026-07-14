@@ -73,6 +73,22 @@
             </div>
         </div>
 
+        <!-- Leyenda de colores -->
+        <div class="leyenda-colores">
+            <span class="leyenda-item">
+                <span class="color-muestra color-normal"></span> Sin actividades
+            </span>
+            <span class="leyenda-item">
+                <span class="color-muestra color-pendiente"></span> Con pendientes
+            </span>
+            <span class="leyenda-item">
+                <span class="color-muestra color-cumplida"></span> Todas cumplidas
+            </span>
+            <span class="leyenda-item">
+                <span class="color-muestra color-sin-actividades"></span> Sin actividades previstas
+            </span>
+        </div>
+
         <!-- Calendario Grid -->
         <div class="calendario-wrapper">
             <div class="calendario-grid" id="calendarioGrid">
@@ -91,6 +107,9 @@
             <div class="filtro-lista" id="filtroLista"></div>
         </div>
     </div>
+
+    <!-- Contenedor para Toast notifications -->
+    <div id="toastContainer" class="toast-container"></div>
 
     <!-- MODAL para ver actividades del día -->
     <div class="modal-overlay" id="modalDiaOverlay">
@@ -122,7 +141,12 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer unellez-footer">
+            <div class="modal-footer unellez-footer modal-footer-dia">
+                <div class="btn-group">
+                    <button id="btnSinActividades" class="btn-sin-actividades" onclick="marcarSinActividades(diaSeleccionado)">
+                        <i class="fas fa-calendar-times"></i> Sin Actividades Previstas
+                    </button>
+                </div>
                 <button onclick="cerrarModalDia()" class="btn-modal btn-cancel">
                     <i class="fas fa-times"></i> Cerrar
                 </button>
@@ -254,7 +278,7 @@
                             <input type="text" id="inputDireccion" placeholder="Ej: Oficina 301">
                         </div>
                         <div class="form-group half">
-                            <label><i class="fas fa-clock"></i> Hora</label>
+                            <label><i class="fas fa-clock"></i> Hora <span style="font-weight:400;color:#999;">(opcional)</span></label>
                             <input type="time" id="inputHora">
                         </div>
                     </div>
