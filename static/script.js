@@ -89,36 +89,30 @@ async function crearActividad(data) {
     try {
         console.log('📝 Creando actividad con datos:', data);
         
-        // Usar URL relativa
-        const url = '/api/actividades';
-        console.log('📡 URL de la petición:', url);
-        
-        const response = await fetch(url, {
+        const response = await fetch('/api/actividades', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(data)
         });
         
         console.log('📥 Status de la respuesta:', response.status);
-        console.log('📥 Headers:', response.headers);
+        console.log('📥 OK:', response.ok);
         
-        // Leer el texto de la respuesta primero para debugging
-        const textResponse = await response.text();
-        console.log('📥 Respuesta cruda del servidor:', textResponse);
-        
+        // Intentar parsear la respuesta como JSON
         let result;
         try {
-            result = JSON.parse(textResponse);
+            result = await response.json();
+            console.log('📥 Respuesta parseada:', result);
         } catch (e) {
             console.error('❌ Error parseando JSON:', e);
+            // Si no es JSON, intentar leer como texto
+            const text = await response.text();
+            console.log('📥 Respuesta como texto:', text);
             showToast('❌ Error del servidor (respuesta no válida)', 'error');
             return null;
         }
-        
-        console.log('📥 Respuesta parseada:', result);
         
         if (response.ok) {
             showToast('✅ Actividad creada exitosamente', 'success');
@@ -135,6 +129,7 @@ async function crearActividad(data) {
         isProcessing = false;
     }
 }
+
 async function actualizarActividad(id, data) {
     if (isProcessing) return null;
     isProcessing = true;
@@ -227,10 +222,10 @@ async function marcarSinActividades(fechaStr) {
         };
         console.log('📝 Enviando datos al servidor:', data);
         const result = await crearActividad(data);
-        console.log('📥 Resultado del servidor:', result);
+        console.log('📥 Resultado de crearActividad:', result);
         
-        if (result) {
-            console.log('✅ Actividad creada, recargando calendario...');
+        if (result && result.id) {
+            console.log('✅ Actividad creada con ID:', result.id);
             showToast('✅ Día marcado como libre', 'success');
             await renderCalendario(true);
             console.log('🔄 Calendario recargado');
@@ -241,7 +236,8 @@ async function marcarSinActividades(fechaStr) {
                 await abrirModalDia(fechaStr);
             }
         } else {
-            console.log('❌ No se pudo crear la actividad');
+            console.log('❌ No se pudo crear la actividad, result:', result);
+            showToast('❌ Error al marcar el día como libre', 'error');
         }
     } catch (error) {
         console.error('❌ Error en marcarSinActividades:', error);
@@ -526,7 +522,7 @@ async function abrirModalDia(fechaStr) {
         btnSinAct.classList.remove('activo');
         btnSinAct.innerHTML = '<i class="fas fa-calendar-times"></i> Marcar como libre';
         btnSinAct.onclick = function() { 
-            console.log('Marcando como libre:', fechaStr);
+            console.log('🖱️ Click en botón Sin Actividades');
             marcarSinActividades(fechaStr); 
         };
         btnSinAct.style.display = 'flex';
