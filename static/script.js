@@ -88,11 +88,22 @@ async function crearActividad(data) {
     isProcessing = true;
     try {
         console.log('📝 Creando actividad con datos:', data);
-        const response = await fetch('/api/actividades', {
+        
+        // Usar URL relativa
+        const url = '/api/actividades';
+        console.log('📡 URL de la petición:', url);
+        
+        const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify(data)
         });
+        
+        console.log('📥 Status de la respuesta:', response.status);
+        console.log('📥 Headers:', response.headers);
         
         // Leer el texto de la respuesta primero para debugging
         const textResponse = await response.text();
@@ -118,13 +129,12 @@ async function crearActividad(data) {
         }
     } catch (error) {
         console.error('❌ Error en crearActividad:', error);
-        showToast('❌ Error de conexión', 'error');
+        showToast(`❌ Error de conexión: ${error.message}`, 'error');
         return null;
     } finally {
         isProcessing = false;
     }
 }
-
 async function actualizarActividad(id, data) {
     if (isProcessing) return null;
     isProcessing = true;
