@@ -93,8 +93,22 @@ async function crearActividad(data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        const result = await response.json();
-        console.log('📥 Respuesta del servidor:', result);
+        
+        // Leer el texto de la respuesta primero para debugging
+        const textResponse = await response.text();
+        console.log('📥 Respuesta cruda del servidor:', textResponse);
+        
+        let result;
+        try {
+            result = JSON.parse(textResponse);
+        } catch (e) {
+            console.error('❌ Error parseando JSON:', e);
+            showToast('❌ Error del servidor (respuesta no válida)', 'error');
+            return null;
+        }
+        
+        console.log('📥 Respuesta parseada:', result);
+        
         if (response.ok) {
             showToast('✅ Actividad creada exitosamente', 'success');
             return result;
