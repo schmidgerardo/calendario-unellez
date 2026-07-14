@@ -261,6 +261,7 @@ def crear_actividad():
             nuevo_orden = resultado['nuevo_orden'] if resultado else 0
             
             print("📝 Insertando actividad en la base de datos...")
+            print(f"📝 Datos a insertar: fecha={fecha}, titulo={titulo}, sin_actividades={sin_actividades}")
             
             # Asegurarse de que sin_actividades sea booleano
             sin_actividades_bool = bool(sin_actividades)
@@ -295,6 +296,7 @@ def crear_actividad():
             conn.rollback()
             print(f"❌ Error en PostgreSQL: {e}")
             print(f"❌ Código de error: {e.pgcode if hasattr(e, 'pgcode') else 'Desconocido'}")
+            print(f"❌ Detalle: {e.diag.message_primary if hasattr(e, 'diag') else 'Sin detalle'}")
             return jsonify({'error': f'Error en la base de datos: {str(e)}'}), 500
         except Exception as e:
             conn.rollback()
