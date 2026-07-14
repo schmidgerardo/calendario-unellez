@@ -153,6 +153,7 @@ async function eliminarActividad(id) {
     }
 }
 
+// ========== FUNCIONES DE SIN ACTIVIDADES ==========
 async function marcarSinActividades(fechaStr) {
     if (isProcessing) return;
     if (!fechaStr) {
@@ -172,7 +173,7 @@ async function marcarSinActividades(fechaStr) {
     // Verificar si ya está marcado
     const yaMarcado = actisDia.some(a => a.sin_actividades);
     if (yaMarcado) {
-        showToast('ℹ️ Este día ya está marcado como sin actividades', 'info');
+        showToast('ℹ️ Este día ya está marcado como libre', 'info');
         return;
     }
     
@@ -180,7 +181,7 @@ async function marcarSinActividades(fechaStr) {
     try {
         const data = {
             fecha: fechaStr,
-            titulo: '🟢 Sin Actividades Previstas',
+            titulo: '📅 Día Libre',
             descripcion: 'Día sin actividades programadas',
             solucion: '',
             direccion: '',
@@ -189,12 +190,16 @@ async function marcarSinActividades(fechaStr) {
         };
         const result = await crearActividad(data);
         if (result) {
-            showToast('✅ Día marcado sin actividades', 'success');
+            showToast('✅ Día marcado como libre', 'success');
             await renderCalendario(true);
-            if (diaSeleccionado) abrirModalDia(diaSeleccionado);
+            // Forzar actualización del modal
+            if (diaSeleccionado === fechaStr) {
+                await abrirModalDia(fechaStr);
+            }
         }
     } catch (error) {
         showToast('❌ Error al marcar día', 'error');
+        console.error('Error en marcarSinActividades:', error);
     } finally {
         isProcessing = false;
     }
@@ -214,10 +219,14 @@ async function eliminarSinActividades(fechaStr) {
             await eliminarActividad(act.id);
         }
         await renderCalendario(true);
-        if (diaSeleccionado) abrirModalDia(diaSeleccionado);
-        showToast('✅ Día desmarcado como sin actividades', 'info');
+        // Forzar actualización del modal
+        if (diaSeleccionado === fechaStr) {
+            await abrirModalDia(fechaStr);
+        }
+        showToast('✅ Día desmarcado como libre', 'info');
     } catch (error) {
         showToast('❌ Error al desmarcar día', 'error');
+        console.error('Error en eliminarSinActividades:', error);
     } finally {
         isProcessing = false;
     }
@@ -339,7 +348,7 @@ async function renderCalendario(recargarDatos = true) {
             
             // Determinar clase del día
             if (tieneSinActividades && actividadesReales.length === 0) {
-                // Día marcado como "Sin Actividades Previstas"
+                // Día marcado como "Sin Actividades Previstas" - AZUL
                 div.classList.add('sin-actividades-previstas');
                 const badge = document.createElement('span');
                 badge.className = 'dia-badge';
@@ -369,7 +378,7 @@ async function renderCalendario(recargarDatos = true) {
                 if (dragItemId) {
                     const act = actividades.find(a => a.id == dragItemId);
                     if (act && act.sin_actividades) {
-                        showToast('⚠️ No se puede mover el marcador de "Sin Actividades"', 'error');
+                        showToast('⚠️ No se puede mover el marcador de "Día Libre"', 'error');
                         return;
                     }
                     await actualizarActividad(dragItemId, { fecha: fechaStr });
@@ -434,17 +443,28 @@ async function abrirModalDia(fechaStr) {
     
     // Actualizar botón "Sin Actividades Previstas"
     const btnSinAct = document.getElementById('btnSinActividades');
+    console.log('Debug - tieneSinActividades:', tieneSinActividades, 'actividadesReales.length:', actividadesReales.length);
+    
     if (tieneSinActividades && actividadesReales.length === 0) {
+        // Ya está marcado como sin actividades
         btnSinAct.classList.add('activo');
-        btnSinAct.innerHTML = '<i class="fas fa-check-circle"></i> Actividades previstas';
-        btnSinAct.onclick = () => eliminarSinActividades(fechaStr);
+        btnSinAct.innerHTML = '<i class="fas fa-check-circle"></i> Quitar marcador';
+        btnSinAct.onclick = function() { 
+            console.log('Eliminando marcador para:', fechaStr);
+            eliminarSinActividades(fechaStr); 
+        };
         btnSinAct.style.display = 'flex';
     } else if (actividadesReales.length === 0 && !tieneSinActividades) {
+        // No hay actividades y no está marcado
         btnSinAct.classList.remove('activo');
-        btnSinAct.innerHTML = '<i class="fas fa-calendar-times"></i> Sin Actividades Previstas';
-        btnSinAct.onclick = () => marcarSinActividades(fechaStr);
+        btnSinAct.innerHTML = '<i class="fas fa-calendar-times"></i> Marcar como libre';
+        btnSinAct.onclick = function() { 
+            console.log('Marcando como libre:', fechaStr);
+            marcarSinActividades(fechaStr); 
+        };
         btnSinAct.style.display = 'flex';
     } else {
+        // Tiene actividades reales
         btnSinAct.style.display = 'none';
     }
     
@@ -458,10 +478,10 @@ function renderActividadesModal(actis, tieneSinActividades) {
         `<i class="fas fa-chart-pie"></i> ${actis.filter(a => a.cumplida).length}/${actis.length}`;
 
     if (tieneSinActividades && actis.length === 0) {
-        lista.innerHTML = `<div class="empty-state" style="background: #e8e8e8; border-radius: 10px; padding: 20px;">
-            <i class="fas fa-calendar-check" style="color: #28a745;"></i>
-            <p style="color: #28a745; font-weight: 600;">✅ Día sin actividades previstas</p>
-            <small>Puedes agregar actividades o desmarcar esta opción</small>
+        lista.innerHTML = `<div class="empty-state" style="background: #d4e8fc; border-radius: 10px; padding: 20px; border: 2px solid #003366;">
+            <i class="fas fa-calendar-check" style="color: #003366;"></i>
+            <p style="color: #003366; font-weight: 600;">📅 Día libre</p>
+            <small style="color: #003366;">Sin actividades programadas</small>
         </div>`;
         return;
     }
