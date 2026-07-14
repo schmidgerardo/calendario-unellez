@@ -425,13 +425,13 @@ body {
 
 /* Día sin actividades previstas */
 .dia.sin-actividades-previstas {
-    background: #e8e8e8 !important;
-    border-color: #aaa !important;
-    color: #666 !important;
+    background: #d4e8fc !important;
+    border-color: #003366 !important;
+    color: #003366 !important;
 }
 
 .dia.sin-actividades-previstas .dia-badge {
-    background: #999 !important;
+    background: #003366 !important;
     color: white !important;
 }
 /* FILTRO RESULTADOS */
