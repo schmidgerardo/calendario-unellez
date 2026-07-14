@@ -4,6 +4,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import sys
+import json  # <--- Añadir esta línea
 from dotenv import load_dotenv
 
 load_dotenv()
