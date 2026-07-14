@@ -54,7 +54,6 @@ async function crearActividad(data) {
         });
         return await response.json();
     } catch (error) {
-        alert("Error al crear");
         return null;
     }
 }
@@ -68,7 +67,6 @@ async function actualizarActividad(id, data) {
         });
         return await response.json();
     } catch (error) {
-        console.error('Error al actualizar');
         return null;
     }
 }
@@ -82,22 +80,20 @@ async function eliminarActividad(id) {
     }
 }
 
-// ========== RENDERIZAR CALENDARIO (VERSION DEFINITIVA) ==========
+// ========== RENDERIZAR CALENDARIO (EVITA DUPLICADOS) ==========
 async function renderCalendario(recargarDatos = true) {
     const grid = document.getElementById('calendarioGrid');
     const wrapper = document.querySelector('.calendario-wrapper');
     const containerResultados = document.getElementById('filtroResultados');
     const listaFiltro = document.getElementById('filtroLista');
 
-    // 1. LIMPIEZA TOTAL INMEDIATA (Evita duplicados)
+    // 1. LIMPIEZA TOTAL PARA EVITAR DUPLICADOS
     grid.innerHTML = '';
     
-    // 2. CARGA DE DATOS (Solo si cambiamos de mes o hubo cambios)
     if (recargarDatos) {
         await fetchActividades(null, mesActual, añoActual);
     }
 
-    // 3. LOGICA DE FILTROS LOCALES
     const estado = document.getElementById('filtroEstado').value;
     const busqueda = document.getElementById('filtroBusqueda').value.trim().toLowerCase();
     const hayFiltro = (estado !== 'todas' || busqueda !== '');
@@ -115,7 +111,6 @@ async function renderCalendario(recargarDatos = true) {
         return coincideEstado && coincideBusqueda;
     });
 
-    // 4. GESTIÓN DE VISTAS
     if (hayFiltro) {
         wrapper.style.display = 'none';
         containerResultados.style.display = 'block';
@@ -125,7 +120,7 @@ async function renderCalendario(recargarDatos = true) {
         containerResultados.style.display = 'none';
         listaFiltro.innerHTML = '';
 
-        // Dibujar Cabecera Días
+        // Cabecera
         ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].forEach(d => {
             const div = document.createElement('div');
             div.className = 'dia-header';
@@ -137,14 +132,12 @@ async function renderCalendario(recargarDatos = true) {
         const diasEnMes = new Date(añoActual, mesActual + 1, 0).getDate();
         const hoyStr = new Date().toISOString().split('T')[0];
 
-        // Rellenar huecos inicio
         for (let i = 0; i < primerDia; i++) {
             const div = document.createElement('div');
             div.className = 'dia otro-mes';
             grid.appendChild(div);
         }
 
-        // Crear días del mes
         for (let d = 1; d <= diasEnMes; d++) {
             const fechaStr = `${añoActual}-${String(mesActual + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const div = document.createElement('div');
@@ -157,7 +150,6 @@ async function renderCalendario(recargarDatos = true) {
             if (actisDia.length > 0) {
                 div.classList.add('tiene-actividades');
                 div.classList.add(pendientes === 0 ? 'todas-cumplidas' : 'tiene-pendientes');
-                
                 const badge = document.createElement('span');
                 badge.className = 'dia-badge';
                 badge.textContent = actisDia.length;
@@ -170,7 +162,6 @@ async function renderCalendario(recargarDatos = true) {
             div.appendChild(numSpan);
 
             if (fechaStr === hoyStr) div.classList.add('hoy');
-
             div.onclick = () => { if(!isDragging) abrirModalDia(fechaStr); };
 
             // Drag & Drop
@@ -183,43 +174,70 @@ async function renderCalendario(recargarDatos = true) {
                     await renderCalendario(true);
                 }
             };
-
             grid.appendChild(div);
         }
     }
 
-    // Actualizar Estadísticas Rápidas
     document.getElementById('totalActividades').textContent = actividadesMes.length;
     document.getElementById('totalCumplidas').textContent = actividadesMes.filter(a => a.cumplida).length;
     document.getElementById('mesLabel').textContent = 
         new Date(añoActual, mesActual).toLocaleString('es', { month: 'long', year: 'numeric' });
 }
 
-// ========== MOSTRAR RESULTADOS FILTRO ==========
+// ========== FUNCIONES DE CIERRE DE MODALES (FIX BUGS) ==========
+function cerrarModalDia() {
+    document.getElementById('modalDiaOverlay').classList.remove('active');
+}
+
+function cerrarModalEstadisticas() {
+    document.getElementById('modalEstadisticasOverlay').classList.remove('active');
+}
+
+function cerrarModalDetalle() {
+    document.getElementById('modalActividadDetalleOverlay').classList.remove('active');
+}
+
+function cerrarModalActividad() {
+    document.getElementById('modalActividadOverlay').classList.remove('active');
+    actividadEnEdicion = null;
+}
+
+function cerrarModalConfirm() {
+    document.getElementById('modalConfirmOverlay').classList.remove('active');
+    modalConfirmCallback = null;
+}
+
+function cerrarTodosModales() {
+    cerrarModalDia();
+    cerrarModalEstadisticas();
+    cerrarModalDetalle();
+    cerrarModalActividad();
+    cerrarModalConfirm();
+}
+
+// ========== RESULTADOS FILTRO ==========
 function mostrarResultadosFiltro() {
     const lista = document.getElementById('filtroLista');
     lista.innerHTML = '';
-    
     if (actividadesFiltradas.length === 0) {
-        lista.innerHTML = `<div style="text-align:center;padding:30px;color:#95a5a6;"><i class="fas fa-search"></i><p>Sin resultados</p></div>`;
+        lista.innerHTML = `<div style="text-align:center;padding:20px;color:#95a5a6;">Sin resultados</div>`;
         return;
     }
-    
     actividadesFiltradas.forEach(act => {
         const div = document.createElement('div');
         div.className = 'actividad-item';
         div.innerHTML = `
-            <input type="checkbox" ${act.cumplida ? 'checked' : ''} onchange="cambiarEstadoDesdeFiltro(event, '${act.id}')">
+            <input type="checkbox" ${act.cumplida ? 'checked' : ''} onchange="cambiarEstadoFiltro(event, '${act.id}')">
             <div class="actividad-info" onclick="abrirModalDetalle('${act.id}')">
                 <div class="actividad-titulo" style="${act.cumplida ? 'text-decoration:line-through' : ''}">${act.titulo}</div>
-                <div class="actividad-detalle">${act.fecha} • ${act.hora || 'Sin hora'}</div>
+                <div class="actividad-detalle">${act.fecha}</div>
             </div>
         `;
         lista.appendChild(div);
     });
 }
 
-async function cambiarEstadoDesdeFiltro(e, id) {
+async function cambiarEstadoFiltro(e, id) {
     await actualizarActividad(id, { cumplida: e.target.checked });
     await renderCalendario(true);
 }
@@ -228,12 +246,10 @@ async function cambiarEstadoDesdeFiltro(e, id) {
 async function abrirModalDia(fechaStr) {
     diaSeleccionado = fechaStr;
     const fecha = new Date(fechaStr + "T00:00:00");
-    
     document.getElementById('modalDiaFecha').textContent = 
         fecha.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     
     const actisDia = actividadesMes.filter(a => a.fecha === fechaStr);
-    
     renderActividadesModal(actisDia);
     actualizarGrafico(actisDia);
     document.getElementById('modalDiaOverlay').classList.add('active');
@@ -242,15 +258,12 @@ async function abrirModalDia(fechaStr) {
 function renderActividadesModal(actis) {
     const lista = document.getElementById('listaActividadesModal');
     lista.innerHTML = '';
-    
-    document.getElementById('modalResumenDia').innerHTML = 
-        `<i class="fas fa-chart-pie"></i> ${actis.filter(a => a.cumplida).length}/${actis.length}`;
+    document.getElementById('modalResumenDia').innerHTML = `<i class="fas fa-chart-pie"></i> ${actis.filter(a => a.cumplida).length}/${actis.length}`;
 
     if (actis.length === 0) {
         lista.innerHTML = `<div class="empty-state"><p>No hay actividades</p></div>`;
         return;
     }
-
     actis.forEach(act => {
         const div = document.createElement('div');
         div.className = 'actividad-item';
@@ -274,53 +287,38 @@ async function toggleCheck(id, valor) {
     abrirModalDia(diaSeleccionado);
 }
 
-function borrarAct(id, titulo) {
-    mostrarModalConfirm("Eliminar", `¿Borrar "${titulo}"?`, async () => {
-        await eliminarActividad(id);
-        await renderCalendario(true);
-        abrirModalDia(diaSeleccionado);
-    });
-}
-
-// ========== DETALLES Y FORMULARIO ==========
+// ========== DETALLE Y EDITAR ==========
 function abrirModalDetalle(id) {
     const act = actividades.find(a => a.id == id);
     if (!act) return;
     actividadDetalleId = id;
-    
     document.getElementById('detalleTitulo').textContent = act.titulo;
     document.getElementById('detalleDescripcion').textContent = act.descripcion || 'Sin descripción';
     document.getElementById('detalleSolucion').textContent = act.solucion || 'Sin solución';
-    document.getElementById('detalleDireccion').textContent = act.direccion || 'Sin dirección';
-    document.getElementById('detalleHora').textContent = act.hora || 'Sin hora';
+    document.getElementById('detalleDireccion').textContent = act.direccion || '-';
+    document.getElementById('detalleHora').textContent = act.hora || '-';
     document.getElementById('detalleFecha').textContent = act.fecha;
-    
-    const status = document.getElementById('detalleEstado');
-    status.innerHTML = act.cumplida ? 
-        '<span class="badge-cumplida">Cumplida</span>' : 
-        '<span class="badge-pendiente">Pendiente</span>';
-
+    document.getElementById('detalleEstado').innerHTML = act.cumplida ? 'Cumplida' : 'Pendiente';
     document.getElementById('modalActividadDetalleOverlay').classList.add('active');
 }
 
 function editarDesdeDetalle() {
     const act = actividades.find(a => a.id == actividadDetalleId);
     if(act) {
-        cerrarTodosModales();
+        cerrarModalDetalle();
         abrirModalActividad(act);
     }
 }
 
 function abrirModalActividad(act = null) {
     actividadEnEdicion = act;
-    document.getElementById('modalActividadTitulo').textContent = act ? 'Editar Actividad' : 'Nueva Actividad';
+    document.getElementById('modalActividadTitulo').textContent = act ? 'Editar' : 'Nueva';
     document.getElementById('inputTitulo').value = act ? act.titulo : '';
     document.getElementById('inputDescripcion').value = act ? act.descripcion || '' : '';
     document.getElementById('inputSolucion').value = act ? act.solucion || '' : '';
     document.getElementById('inputDireccion').value = act ? act.direccion || '' : '';
     document.getElementById('inputHora').value = act ? act.hora || '' : '';
     document.getElementById('inputFecha').value = act ? act.fecha : (diaSeleccionado || new Date().toISOString().split('T')[0]);
-    
     document.getElementById('modalActividadOverlay').classList.add('active');
 }
 
@@ -334,40 +332,34 @@ async function guardarActividadForm(e) {
         hora: document.getElementById('inputHora').value,
         fecha: document.getElementById('inputFecha').value
     };
-
     if (actividadEnEdicion) await actualizarActividad(actividadEnEdicion.id, data);
     else await crearActividad(data);
-
-    cerrarTodosModales();
+    cerrarModalActividad();
     await renderCalendario(true);
     if (diaSeleccionado) abrirModalDia(data.fecha);
 }
 
-// ========== ESTADÍSTICAS ==========
+// ========== ESTADISTICAS ==========
 function abrirModalEstadisticas() {
     const total = actividadesMes.length;
     const cumplidas = actividadesMes.filter(a => a.cumplida).length;
-    
     document.getElementById('estTotal').textContent = total;
     document.getElementById('estCumplidas').textContent = cumplidas;
     document.getElementById('estPendientes').textContent = total - cumplidas;
 
     const ctx = document.getElementById('chartEstadisticas').getContext('2d');
     if (chartEstadisticasInstance) chartEstadisticasInstance.destroy();
-    
     chartEstadisticasInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['Cumplidas', 'Pendientes'],
             datasets: [{ data: [cumplidas, total - cumplidas], backgroundColor: ['#003366', '#CC0000'] }]
-        },
-        options: { plugins: { legend: { position: 'bottom' } } }
+        }
     });
-    
     document.getElementById('modalEstadisticasOverlay').classList.add('active');
 }
 
-// ========== NAVEGACIÓN Y FILTROS ==========
+// ========== NAVEGACION ==========
 function cambiarMes(delta) {
     mesActual += delta;
     if (mesActual > 11) { mesActual = 0; añoActual++; }
@@ -383,7 +375,7 @@ function irHoy() {
 }
 
 function aplicarFiltrosCalendario() {
-    renderCalendario(false); // No recarga de API al escribir
+    renderCalendario(false);
 }
 
 function limpiarFiltros() {
@@ -392,9 +384,12 @@ function limpiarFiltros() {
     renderCalendario(false);
 }
 
-// ========== UTILS ==========
-function cerrarTodosModales() {
-    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+function borrarAct(id, titulo) {
+    mostrarModalConfirm("Eliminar", `¿Borrar "${titulo}"?`, async () => {
+        await eliminarActividad(id);
+        await renderCalendario(true);
+        if (diaSeleccionado) abrirModalDia(diaSeleccionado);
+    });
 }
 
 function mostrarModalConfirm(titulo, msj, cb) {
@@ -403,6 +398,11 @@ function mostrarModalConfirm(titulo, msj, cb) {
     modalConfirmCallback = cb;
     document.getElementById('modalConfirmOverlay').classList.add('active');
 }
+
+document.getElementById('modalConfirmBtn').onclick = () => {
+    if(modalConfirmCallback) modalConfirmCallback();
+    cerrarModalConfirm();
+};
 
 function actualizarGrafico(actis) {
     const ctx = document.getElementById('chartDia').getContext('2d');
@@ -420,15 +420,10 @@ function actualizarGrafico(actis) {
 document.addEventListener('DOMContentLoaded', () => {
     renderCalendario(true);
     
-    // Eventos de cierre
+    // Cerrar al hacer clic fuera del modal
     document.querySelectorAll('.modal-overlay').forEach(ov => {
         ov.onclick = (e) => { if(e.target === ov) cerrarTodosModales(); };
     });
-    
-    document.getElementById('modalConfirmBtn').onclick = () => {
-        if(modalConfirmCallback) modalConfirmCallback();
-        cerrarTodosModales();
-    };
 
     document.addEventListener('keydown', e => { if(e.key === 'Escape') cerrarTodosModales(); });
 });
