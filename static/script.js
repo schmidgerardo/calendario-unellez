@@ -87,12 +87,14 @@ async function crearActividad(data) {
     if (isProcessing) return null;
     isProcessing = true;
     try {
+        console.log('📝 Creando actividad con datos:', data);
         const response = await fetch('/api/actividades', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         const result = await response.json();
+        console.log('📥 Respuesta del servidor:', result);
         if (response.ok) {
             showToast('✅ Actividad creada exitosamente', 'success');
             return result;
@@ -101,6 +103,7 @@ async function crearActividad(data) {
             return null;
         }
     } catch (error) {
+        console.error('❌ Error en crearActividad:', error);
         showToast('❌ Error de conexión', 'error');
         return null;
     } finally {
@@ -155,7 +158,12 @@ async function eliminarActividad(id) {
 
 // ========== FUNCIONES DE SIN ACTIVIDADES ==========
 async function marcarSinActividades(fechaStr) {
-    if (isProcessing) return;
+    console.log('🚀 marcarSinActividades llamado con fecha:', fechaStr);
+    
+    if (isProcessing) {
+        console.log('⏳ Ya hay una operación en proceso');
+        return;
+    }
     if (!fechaStr) {
         showToast('❌ No hay fecha seleccionada', 'error');
         return;
@@ -163,7 +171,10 @@ async function marcarSinActividades(fechaStr) {
     
     // Verificar si ya tiene actividades reales
     const actisDia = actividadesMes.filter(a => a.fecha === fechaStr);
+    console.log('📋 Actividades del día:', actisDia);
+    
     const tieneActividadesReales = actisDia.some(a => !a.sin_actividades);
+    console.log('📊 Tiene actividades reales:', tieneActividadesReales);
     
     if (tieneActividadesReales) {
         showToast('⚠️ Este día ya tiene actividades programadas', 'error');
@@ -172,6 +183,8 @@ async function marcarSinActividades(fechaStr) {
     
     // Verificar si ya está marcado
     const yaMarcado = actisDia.some(a => a.sin_actividades);
+    console.log('📊 Ya está marcado como libre:', yaMarcado);
+    
     if (yaMarcado) {
         showToast('ℹ️ Este día ya está marcado como libre', 'info');
         return;
@@ -188,26 +201,39 @@ async function marcarSinActividades(fechaStr) {
             hora: null,
             sin_actividades: true
         };
+        console.log('📝 Enviando datos al servidor:', data);
         const result = await crearActividad(data);
+        console.log('📥 Resultado del servidor:', result);
+        
         if (result) {
+            console.log('✅ Actividad creada, recargando calendario...');
             showToast('✅ Día marcado como libre', 'success');
             await renderCalendario(true);
+            console.log('🔄 Calendario recargado');
+            
             // Forzar actualización del modal
             if (diaSeleccionado === fechaStr) {
+                console.log('📂 Abriendo modal del día:', fechaStr);
                 await abrirModalDia(fechaStr);
             }
+        } else {
+            console.log('❌ No se pudo crear la actividad');
         }
     } catch (error) {
+        console.error('❌ Error en marcarSinActividades:', error);
         showToast('❌ Error al marcar día', 'error');
-        console.error('Error en marcarSinActividades:', error);
     } finally {
         isProcessing = false;
     }
 }
 
 async function eliminarSinActividades(fechaStr) {
+    console.log('🚀 eliminarSinActividades llamado con fecha:', fechaStr);
+    
     if (isProcessing) return;
     const actis = actividadesMes.filter(a => a.fecha === fechaStr && a.sin_actividades);
+    console.log('📋 Actividades a eliminar:', actis);
+    
     if (actis.length === 0) {
         showToast('ℹ️ No hay marcador para eliminar', 'info');
         return;
@@ -216,17 +242,21 @@ async function eliminarSinActividades(fechaStr) {
     isProcessing = true;
     try {
         for (const act of actis) {
+            console.log('🗑️ Eliminando actividad:', act.id);
             await eliminarActividad(act.id);
         }
+        console.log('✅ Actividades eliminadas, recargando calendario...');
         await renderCalendario(true);
+        
         // Forzar actualización del modal
         if (diaSeleccionado === fechaStr) {
+            console.log('📂 Abriendo modal del día:', fechaStr);
             await abrirModalDia(fechaStr);
         }
         showToast('✅ Día desmarcado como libre', 'info');
     } catch (error) {
+        console.error('❌ Error en eliminarSinActividades:', error);
         showToast('❌ Error al desmarcar día', 'error');
-        console.error('Error en eliminarSinActividades:', error);
     } finally {
         isProcessing = false;
     }
@@ -274,6 +304,8 @@ function cerrarTodosModales() {
 
 // ========== RENDERIZAR CALENDARIO ==========
 async function renderCalendario(recargarDatos = true) {
+    console.log('🔄 renderCalendario llamado, recargarDatos:', recargarDatos);
+    
     const grid = document.getElementById('calendarioGrid');
     const wrapper = document.querySelector('.calendario-wrapper');
     const containerResultados = document.getElementById('filtroResultados');
@@ -283,7 +315,9 @@ async function renderCalendario(recargarDatos = true) {
     grid.innerHTML = '';
     
     if (recargarDatos) {
+        console.log('📡 Fetching actividades del mes...');
         await fetchActividades(null, mesActual, añoActual);
+        console.log('📊 Actividades cargadas:', actividadesMes.length);
     }
 
     const estado = document.getElementById('filtroEstado').value;
@@ -354,6 +388,7 @@ async function renderCalendario(recargarDatos = true) {
                 badge.className = 'dia-badge';
                 badge.textContent = '✓';
                 div.appendChild(badge);
+                console.log(`🔵 Día ${fechaStr} marcado como libre`);
             } else if (actividadesReales.length > 0) {
                 div.classList.add('tiene-actividades');
                 div.classList.add(pendientes === 0 ? 'todas-cumplidas' : 'tiene-pendientes');
@@ -396,6 +431,8 @@ async function renderCalendario(recargarDatos = true) {
     document.getElementById('totalCumplidas').textContent = actividadesReales.filter(a => a.cumplida).length;
     document.getElementById('mesLabel').textContent = 
         new Date(añoActual, mesActual).toLocaleString('es', { month: 'long', year: 'numeric' });
+    
+    console.log('✅ renderCalendario completado');
 }
 
 // ========== RESULTADOS FILTRO ==========
@@ -428,6 +465,8 @@ async function cambiarEstadoFiltro(e, id) {
 
 // ========== MODAL DIA ==========
 async function abrirModalDia(fechaStr) {
+    console.log('📂 abrirModalDia llamado con fecha:', fechaStr);
+    
     if (isProcessing) return;
     diaSeleccionado = fechaStr;
     const fecha = new Date(fechaStr + "T00:00:00");
@@ -437,6 +476,10 @@ async function abrirModalDia(fechaStr) {
     const actisDia = actividadesMes.filter(a => a.fecha === fechaStr);
     const tieneSinActividades = actisDia.some(a => a.sin_actividades);
     const actividadesReales = actisDia.filter(a => !a.sin_actividades);
+    
+    console.log('📋 actisDia:', actisDia);
+    console.log('📋 tieneSinActividades:', tieneSinActividades);
+    console.log('📋 actividadesReales:', actividadesReales);
     
     renderActividadesModal(actividadesReales, tieneSinActividades);
     actualizarGrafico(actividadesReales);
@@ -779,6 +822,7 @@ function prevenirDobleClic() {
 
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Iniciando calendario...');
     renderCalendario(true);
     
     // Cerrar al hacer clic fuera del modal
