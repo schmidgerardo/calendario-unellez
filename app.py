@@ -98,7 +98,7 @@ def init_db():
         else:
             print("✅ Tabla 'actividades' ya existe")
             
-            # Verificar si faltan columnas (para actualizar versiones anteriores)
+            # Verificar si faltan columnas
             cur.execute("""
                 SELECT column_name 
                 FROM information_schema.columns 
@@ -123,6 +123,16 @@ def init_db():
                 cur.execute('ALTER TABLE actividades ADD COLUMN sin_actividades BOOLEAN DEFAULT FALSE')
                 conn.commit()
                 print("✅ Columna 'sin_actividades' agregada")
+            else:
+                # Verificar el tipo de la columna
+                cur.execute("""
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'actividades' 
+                    AND column_name = 'sin_actividades'
+                """)
+                data_type = cur.fetchone()[0]
+                print(f"📊 Columna 'sin_actividades' existe, tipo: {data_type}")
         
         cur.close()
         conn.close()
@@ -134,6 +144,7 @@ def init_db():
     except Exception as e:
         print(f"❌ Error al inicializar la base de datos: {e}")
         return False
+
 
 @app.route('/')
 def index():
