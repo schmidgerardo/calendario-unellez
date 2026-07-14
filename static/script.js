@@ -40,6 +40,12 @@ async function fetchActividades(fecha = null, mes = null, año = null) {
             console.error('La respuesta no es un array:', data);
             return [];
         }
+        
+        // ✅ Limpiar arrays antes de asignar para evitar duplicación
+        actividades = [];
+        actividadesMes = [];
+        actividadesFiltradas = [];
+        
         actividades = data;
         if (mes !== null && año !== null) {
             const mesStr = String(mes + 1).padStart(2, '0');
@@ -143,6 +149,7 @@ async function renderCalendario() {
         grid.appendChild(div);
     });
 
+    // ✅ Obtener actividades del mes actual
     await fetchActividades(null, mesActual, añoActual);
     if (!Array.isArray(actividadesMes)) actividadesMes = [];
     
@@ -250,7 +257,7 @@ async function renderCalendario() {
         grid.appendChild(div);
     }
 
-    // ✅ Mostrar resultados del filtro (sin duplicar)
+    // ✅ Mostrar resultados del filtro
     mostrarResultadosFiltro();
 
     // Actualizar estadísticas
