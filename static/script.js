@@ -114,7 +114,7 @@ async function eliminarActividad(id) {
 async function renderCalendario() {
     const grid = document.getElementById('calendarioGrid');
     
-    // 🔴 IMPORTANTE: Limpiar completamente antes de renderizar
+    // Limpiar completamente antes de renderizar
     grid.innerHTML = '';
     
     const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -128,7 +128,7 @@ async function renderCalendario() {
     await fetchActividades(null, mesActual, añoActual);
     if (!Array.isArray(actividadesMes)) actividadesMes = [];
     
-    // Aplicar filtros a las actividades del mes
+    // Aplicar filtros
     const estado = document.getElementById('filtroEstado').value;
     const busqueda = document.getElementById('filtroBusqueda').value.toLowerCase().trim();
     
@@ -230,8 +230,10 @@ async function renderCalendario() {
         grid.appendChild(div);
     }
 
+    // Mostrar resultados del filtro
     mostrarResultadosFiltro();
 
+    // Actualizar estadísticas
     const total = actividadesMes.length;
     const cumplidasTotal = actividadesMes.filter(a => a.cumplida).length;
     document.getElementById('totalActividades').textContent = total;
@@ -241,7 +243,7 @@ async function renderCalendario() {
         new Date(añoActual, mesActual).toLocaleString('es', { month: 'long', year: 'numeric' });
 }
 
-// ========== MOSTRAR RESULTADOS DEL FILTRO ==========
+// ========== MOSTRAR RESULTADOS DEL FILTRO (CORREGIDO) ==========
 function mostrarResultadosFiltro() {
     const container = document.getElementById('filtroResultados');
     const lista = document.getElementById('filtroLista');
@@ -260,7 +262,7 @@ function mostrarResultadosFiltro() {
     wrapper.style.display = 'none';
     container.style.display = 'block';
     
-    // Limpiar lista antes de agregar nuevos elementos
+    // ✅ IMPORTANTE: Limpiar la lista ANTES de agregar nuevos elementos
     lista.innerHTML = '';
     
     if (actividadesFiltradas.length === 0) {
