@@ -224,71 +224,93 @@ def get_actividades():
 @app.route('/api/actividades', methods=['POST'])
 def crear_actividad():
     """Crea una nueva actividad"""
-    data = request.json
-    fecha = data.get('fecha')
-    titulo = data.get('titulo')
-    descripcion = data.get('descripcion', '')
-    solucion = data.get('solucion', '')
-    direccion = data.get('direccion', '')
-    hora = data.get('hora') or None  # Permitir null
-    sin_actividades = data.get('sin_actividades', False)
-    
-    if not fecha or not titulo:
-        return jsonify({'error': 'Fecha y título son obligatorios'}), 400
-    
-    # Validar formato de fecha
     try:
-        from datetime import datetime
-        datetime.strptime(fecha, '%Y-%m-%d')
-    except ValueError:
-        return jsonify({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
-    
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'error': 'Error de conexión a la base de datos'}), 500
-    
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    try:
-        # Obtener el máximo orden
-        cur.execute('SELECT COALESCE(MAX(orden), -1) + 1 as nuevo_orden FROM actividades WHERE fecha = %s', (fecha,))
-        nuevo_orden = cur.fetchone()['nuevo_orden'] or 0
+        data = request.json
+        print("📝 Datos recibidos en POST:", data)
         
-        # Insertar
-        cur.execute('''
-            INSERT INTO actividades (fecha, titulo, descripcion, solucion, direccion, hora, sin_actividades, orden)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING *
-        ''', (fecha, titulo, descripcion, solucion, direccion, hora, sin_actividades, nuevo_orden))
+        fecha = data.get('fecha')
+        titulo = data.get('titulo')
+        descripcion = data.get('descripcion', '')
+        solucion = data.get('solucion', '')
+        direccion = data.get('direccion', '')
+        hora = data.get('hora') or None
+        sin_actividades = data.get('sin_actividades', False)
         
-        nueva_actividad = cur.fetchone()
-        conn.commit()
+        print(f"📊 sin_actividades: {sin_actividades}, tipo: {type(sin_actividades)}")
         
-        return jsonify({
-            'id': nueva_actividad['id'],
-            'fecha': nueva_actividad['fecha'].isoformat(),
-            'titulo': nueva_actividad['titulo'],
-            'descripcion': nueva_actividad['descripcion'] or '',
-            'solucion': nueva_actividad['solucion'] or '',
-            'direccion': nueva_actividad['direccion'] or '',
-            'hora': nueva_actividad['hora'].strftime('%H:%M') if nueva_actividad['hora'] else '',
-            'cumplida': nueva_actividad['cumplida'],
-            'sin_actividades': nueva_actividad['sin_actividades'] or False,
-            'orden': nueva_actividad['orden'],
-            'created_at': nueva_actividad['created_at'].isoformat() if nueva_actividad['created_at'] else None
-        }), 201
-    
-    except psycopg2.Error as e:
-        conn.rollback()
-        print(f"❌ Error en crear_actividad (PostgreSQL): {e}")
-        return jsonify({'error': f'Error en la base de datos: {str(e)}'}), 500
+        if not fecha or not titulo:
+            return jsonify({'error': 'Fecha y título son obligatorios'}), 400
+        
+        # Validar formato de fecha
+        try:
+            from datetime import datetime
+            datetime.strptime(fecha, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Error de conexión a la base de datos'}), 500
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        try:
+            # Obtener el máximo orden
+            cur.execute('SELECT COALESCE(MAX(orden), -1) + 1 as nuevo_orden FROM actividades WHERE fecha = %s', (fecha,))
+            resultado = cur.fetchone()
+            nuevo_orden = resultado['nuevo_orden'] if resultado else 0
+            
+            print("📝 Insertando actividad en la base de datos...")
+            
+            # Asegurarse de que sin_actividades sea booleano
+            sin_actividades_bool = bool(sin_actividades)
+            
+            cur.execute('''
+                INSERT INTO actividades (fecha, titulo, descripcion, solucion, direccion, hora, sin_actividades, orden)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING *
+            ''', (fecha, titulo, descripcion, solucion, direccion, hora, sin_actividades_bool, nuevo_orden))
+            
+            nueva_actividad = cur.fetchone()
+            conn.commit()
+            
+            print("✅ Actividad creada exitosamente:", nueva_actividad['id'])
+            
+            # Convertir a JSON
+            return jsonify({
+                'id': nueva_actividad['id'],
+                'fecha': nueva_actividad['fecha'].isoformat(),
+                'titulo': nueva_actividad['titulo'],
+                'descripcion': nueva_actividad['descripcion'] or '',
+                'solucion': nueva_actividad['solucion'] or '',
+                'direccion': nueva_actividad['direccion'] or '',
+                'hora': nueva_actividad['hora'].strftime('%H:%M') if nueva_actividad['hora'] else '',
+                'cumplida': nueva_actividad['cumplida'],
+                'sin_actividades': nueva_actividad['sin_actividades'] or False,
+                'orden': nueva_actividad['orden'],
+                'created_at': nueva_actividad['created_at'].isoformat() if nueva_actividad['created_at'] else None
+            }), 201
+        
+        except psycopg2.Error as e:
+            conn.rollback()
+            print(f"❌ Error en PostgreSQL: {e}")
+            print(f"❌ Código de error: {e.pgcode if hasattr(e, 'pgcode') else 'Desconocido'}")
+            return jsonify({'error': f'Error en la base de datos: {str(e)}'}), 500
+        except Exception as e:
+            conn.rollback()
+            print(f"❌ Error inesperado: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
+        finally:
+            cur.close()
+            conn.close()
+            
     except Exception as e:
-        conn.rollback()
-        print(f"❌ Error en crear_actividad: {e}")
+        print(f"❌ Error en la solicitud: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-    finally:
-        cur.close()
-        conn.close()
 
 @app.route('/api/actividades/<int:id>', methods=['PUT'])
 def actualizar_actividad(id):
