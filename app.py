@@ -83,6 +83,7 @@ def init_db():
                     direccion TEXT,
                     hora TIME,
                     cumplida BOOLEAN DEFAULT FALSE,
+                    sin_actividades BOOLEAN DEFAULT FALSE,
                     orden INTEGER DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -109,6 +110,19 @@ def init_db():
                 cur.execute('ALTER TABLE actividades ADD COLUMN solucion TEXT')
                 conn.commit()
                 print("✅ Columna 'solucion' agregada")
+            
+            # Verificar columna 'sin_actividades'
+            cur.execute("""
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'actividades' 
+                AND column_name = 'sin_actividades'
+            """)
+            if not cur.fetchone():
+                print("📝 Agregando columna 'sin_actividades'...")
+                cur.execute('ALTER TABLE actividades ADD COLUMN sin_actividades BOOLEAN DEFAULT FALSE')
+                conn.commit()
+                print("✅ Columna 'sin_actividades' agregada")
         
         cur.close()
         conn.close()
@@ -190,6 +204,7 @@ def get_actividades():
                 'direccion': act['direccion'] or '',
                 'hora': act['hora'].strftime('%H:%M') if act['hora'] else '',
                 'cumplida': act['cumplida'],
+                'sin_actividades': act['sin_actividades'] or False,
                 'orden': act['orden'],
                 'created_at': act['created_at'].isoformat() if act['created_at'] else None
             })
@@ -215,7 +230,8 @@ def crear_actividad():
     descripcion = data.get('descripcion', '')
     solucion = data.get('solucion', '')
     direccion = data.get('direccion', '')
-    hora = data.get('hora', None)
+    hora = data.get('hora') or None  # Permitir null
+    sin_actividades = data.get('sin_actividades', False)
     
     if not fecha or not titulo:
         return jsonify({'error': 'Fecha y título son obligatorios'}), 400
@@ -240,10 +256,10 @@ def crear_actividad():
         
         # Insertar
         cur.execute('''
-            INSERT INTO actividades (fecha, titulo, descripcion, solucion, direccion, hora, orden)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO actividades (fecha, titulo, descripcion, solucion, direccion, hora, sin_actividades, orden)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
-        ''', (fecha, titulo, descripcion, solucion, direccion, hora, nuevo_orden))
+        ''', (fecha, titulo, descripcion, solucion, direccion, hora, sin_actividades, nuevo_orden))
         
         nueva_actividad = cur.fetchone()
         conn.commit()
@@ -257,6 +273,7 @@ def crear_actividad():
             'direccion': nueva_actividad['direccion'] or '',
             'hora': nueva_actividad['hora'].strftime('%H:%M') if nueva_actividad['hora'] else '',
             'cumplida': nueva_actividad['cumplida'],
+            'sin_actividades': nueva_actividad['sin_actividades'] or False,
             'orden': nueva_actividad['orden'],
             'created_at': nueva_actividad['created_at'].isoformat() if nueva_actividad['created_at'] else None
         }), 201
@@ -319,8 +336,14 @@ def actualizar_actividad(id):
             params.append(data['direccion'])
         
         if 'hora' in data:
+            # Permitir null para hora
+            hora_val = data['hora'] if data['hora'] else None
             updates.append('hora = %s')
-            params.append(data['hora'] if data['hora'] else None)
+            params.append(hora_val)
+        
+        if 'sin_actividades' in data:
+            updates.append('sin_actividades = %s')
+            params.append(data['sin_actividades'])
         
         if not updates:
             return jsonify({'error': 'No se proporcionaron campos para actualizar'}), 400
@@ -341,6 +364,7 @@ def actualizar_actividad(id):
             'direccion': actividad['direccion'] or '',
             'hora': actividad['hora'].strftime('%H:%M') if actividad['hora'] else '',
             'cumplida': actividad['cumplida'],
+            'sin_actividades': actividad['sin_actividades'] or False,
             'orden': actividad['orden'],
             'created_at': actividad['created_at'].isoformat() if actividad['created_at'] else None
         })
@@ -430,19 +454,19 @@ def get_estadisticas():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     try:
-        # Total de actividades
-        cur.execute('SELECT COUNT(*) as total FROM actividades')
+        # Total de actividades (excluyendo las de "sin_actividades")
+        cur.execute('SELECT COUNT(*) as total FROM actividades WHERE sin_actividades = false')
         total = cur.fetchone()['total']
         
         # Actividades cumplidas
-        cur.execute('SELECT COUNT(*) as cumplidas FROM actividades WHERE cumplida = true')
+        cur.execute('SELECT COUNT(*) as cumplidas FROM actividades WHERE cumplida = true AND sin_actividades = false')
         cumplidas = cur.fetchone()['cumplidas']
         
         # Actividades por día (últimos 7 días)
         cur.execute('''
             SELECT fecha, COUNT(*) as count 
             FROM actividades 
-            WHERE fecha >= CURRENT_DATE - INTERVAL '7 days'
+            WHERE fecha >= CURRENT_DATE - INTERVAL '7 days' AND sin_actividades = false
             GROUP BY fecha 
             ORDER BY fecha
         ''')
