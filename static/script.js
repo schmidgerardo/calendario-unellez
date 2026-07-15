@@ -20,6 +20,35 @@ let dragStartX = 0;
 let dragStartY = 0;
 let dragItemId = null;
 
+// ========== FUNCIONES DE FORMATO ==========
+function formatearHora12(hora24) {
+    if (!hora24) return '';
+    
+    // Si la hora ya está en formato 12h (con AM/PM), devolverla tal cual
+    if (hora24.includes('AM') || hora24.includes('PM')) {
+        return hora24;
+    }
+    
+    try {
+        // Separar horas y minutos
+        const partes = hora24.split(':');
+        let horas = parseInt(partes[0]);
+        const minutos = partes[1] || '00';
+        
+        // Determinar AM/PM
+        const ampm = horas >= 12 ? 'PM' : 'AM';
+        
+        // Convertir a formato 12 horas
+        horas = horas % 12;
+        horas = horas ? horas : 12; // 0 -> 12
+        
+        return `${horas}:${minutos} ${ampm}`;
+    } catch (e) {
+        // Si hay error, devolver la hora original
+        return hora24;
+    }
+}
+
 // ========== TOAST NOTIFICATIONS ==========
 function showToast(message, type = 'success', duration = 3000) {
     const container = document.getElementById('toastContainer');
@@ -97,33 +126,32 @@ async function crearActividad(data) {
             body: JSON.stringify(data)
         });
         
-        console.log('📥 Status de la respuesta:', response.status);
+        console.log('📥 Status:', response.status);
         console.log('📥 OK:', response.ok);
         
-        // Intentar parsear la respuesta como JSON
-        let result;
+        const textResponse = await response.text();
+        console.log('📥 Respuesta cruda:', textResponse);
+        
+        let result = null;
         try {
-            result = await response.json();
-            console.log('📥 Respuesta parseada:', result);
+            result = JSON.parse(textResponse);
+            console.log('📥 JSON parseado:', result);
         } catch (e) {
             console.error('❌ Error parseando JSON:', e);
-            // Si no es JSON, intentar leer como texto
-            const text = await response.text();
-            console.log('📥 Respuesta como texto:', text);
-            showToast('❌ Error del servidor (respuesta no válida)', 'error');
+            showToast('❌ Error del servidor', 'error');
             return null;
         }
         
-        if (response.ok) {
+        if (response.ok && result) {
             showToast('✅ Actividad creada exitosamente', 'success');
             return result;
         } else {
-            showToast(result.error || '❌ Error al crear actividad', 'error');
+            showToast(result?.error || '❌ Error al crear actividad', 'error');
             return null;
         }
     } catch (error) {
         console.error('❌ Error en crearActividad:', error);
-        showToast(`❌ Error de conexión: ${error.message}`, 'error');
+        showToast(`❌ Error: ${error.message}`, 'error');
         return null;
     } finally {
         isProcessing = false;
@@ -559,11 +587,12 @@ function renderActividadesModal(actis, tieneSinActividades) {
         const div = document.createElement('div');
         div.className = 'actividad-item';
         div.draggable = true;
+        const horaFormateada = act.hora ? formatearHora12(act.hora) : '';
         div.innerHTML = `
             <input type="checkbox" ${act.cumplida ? 'checked' : ''} onchange="toggleCheck('${act.id}', this.checked)">
             <div class="actividad-info" onclick="abrirModalDetalle('${act.id}')">
                 <div class="actividad-titulo ${act.cumplida ? 'cumplida' : ''}">${act.titulo}</div>
-                <div class="actividad-detalle">${act.hora ? '<i class="fas fa-clock"></i> ' + act.hora : ''} ${act.direccion ? '<i class="fas fa-map-marker-alt"></i> ' + act.direccion : ''}</div>
+                <div class="actividad-detalle">${horaFormateada ? '<i class="fas fa-clock"></i> ' + horaFormateada : ''} ${act.direccion ? '<i class="fas fa-map-marker-alt"></i> ' + act.direccion : ''}</div>
             </div>
             <button class="btn-eliminar" onclick="borrarAct('${act.id}', '${act.titulo}')"><i class="fas fa-trash"></i></button>
         `;
@@ -593,7 +622,7 @@ function abrirModalDetalle(id) {
     document.getElementById('detalleDescripcion').textContent = act.descripcion || 'Sin descripción';
     document.getElementById('detalleSolucion').textContent = act.solucion || 'Sin solución registrada';
     document.getElementById('detalleDireccion').textContent = act.direccion || '-';
-    document.getElementById('detalleHora').textContent = act.hora || '-';
+    document.getElementById('detalleHora').textContent = act.hora ? formatearHora12(act.hora) : '-';
     document.getElementById('detalleFecha').textContent = act.fecha;
     const estadoHtml = act.cumplida ? 
         '<span style="color:#28a745;font-weight:700;">✅ Cumplida</span>' : 
@@ -762,7 +791,7 @@ function abrirModalEstadisticas() {
             div.innerHTML = `
                 <div class="actividad-info">
                     <div class="actividad-titulo" style="${act.cumplida ? 'text-decoration:line-through;color:#95a5a6;' : ''}">${act.titulo}</div>
-                    <div class="actividad-detalle">${act.fecha} ${act.hora ? '⏰ ' + act.hora : ''}</div>
+                    <div class="actividad-detalle">${act.fecha} ${act.hora ? '⏰ ' + formatearHora12(act.hora) : ''}</div>
                 </div>
                 <span style="font-size:11px;font-weight:600;color:${act.cumplida ? '#28a745' : '#dc3545'};">${act.cumplida ? '✅' : '⏳'}</span>
             `;
